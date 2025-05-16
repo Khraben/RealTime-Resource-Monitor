@@ -14,10 +14,37 @@ services:
     depends_on:
       - redis
 
-  worker:
+  worker-1:
     build:
       context: ./backend/worker
-    container_name: worker
+    container_name: worker-1
+    environment:
+      - WORKER_ID=worker-1
+      - WORKER_IP=127.0.0.1
+      - WORKER_PORT=5001
+      - MONITORING_URL=http://monitoring:5002
     depends_on:
       - redis
-    restart: always
+      - monitoring
+
+  worker-2:
+    build:
+      context: ./backend/worker
+    container_name: worker-2
+    environment:
+      - WORKER_ID=worker-2
+      - WORKER_IP=127.0.0.1
+      - WORKER_PORT=5002
+      - MONITORING_URL=http://monitoring:5002
+    depends_on:
+      - redis
+      - monitoring
+
+  monitoring:
+    build:
+      context: ./monitoring
+    container_name: monitoring
+    ports:
+      - "5002:5002"
+    depends_on:
+      - redis
