@@ -6,12 +6,12 @@ import os
 
 # Configuración de Redis y Monitoring
 redis_client = redis.Redis(host='redis', port=6379, decode_responses=True)
-MONITORING_URL = os.getenv('MONITORING_URL', 'http://monitoring:5002')
+MONITORING_URL = os.getenv('MONITORING_URL', 'http://monitoring:5001')
 
 # Información del Worker
 WORKER_ID = os.getenv('WORKER_ID', 'worker-1')
 WORKER_IP = os.getenv('WORKER_IP', '127.0.0.1')
-WORKER_PORT = os.getenv('WORKER_PORT', '5001')
+WORKER_PORT = os.getenv('WORKER_PORT', '5002')
 
 def register_worker():
     """Registra el worker en el módulo /monitoring."""

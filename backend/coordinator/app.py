@@ -8,7 +8,7 @@ app = Flask(__name__)
 redis_client = redis.Redis(host='redis', port=6379, decode_responses=True)
 
 # URL del módulo /monitoring
-MONITORING_URL = os.getenv('MONITORING_URL', 'http://monitoring:5002')
+MONITORING_URL = os.getenv('MONITORING_URL', 'http://monitoring:5001')
 
 @app.route('/task', methods=['POST'])
 def assign_task():
