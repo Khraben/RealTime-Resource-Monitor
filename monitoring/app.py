@@ -28,6 +28,8 @@ def worker_heartbeat():
     if redis_client.sismember('workers:active', worker_id):
         redis_client.hset(f'worker:{worker_id}', 'cpu_usage', data['cpu_usage'])
         redis_client.hset(f'worker:{worker_id}', 'memory_usage', data['memory_usage'])
+        redis_client.hset(f'worker:{worker_id}', 'disk_usage', data['disk_usage'])  # Agregar almacenamiento
+        redis_client.hset(f'worker:{worker_id}', 'network_usage', data['network_usage'])  # Agregar red
         redis_client.hset(f'worker:{worker_id}', 'tasks_processed', data['tasks_processed'])
         redis_client.hset(f'worker:{worker_id}', 'last_heartbeat', time.time())
         return jsonify({'message': f'Heartbeat received for worker {worker_id}'}), 200

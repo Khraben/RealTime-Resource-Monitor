@@ -3,6 +3,7 @@ import json
 import time
 import requests
 import os
+import psutil
 
 # Configuración de Redis y Monitoring
 redis_client = redis.Redis(host='redis', port=6379, decode_responses=True)
@@ -26,12 +27,14 @@ def register_worker():
     except Exception as e:
         print(f"Error registering worker: {e}")
 
-def send_heartbeat(cpu_usage, memory_usage, tasks_processed):
+def send_heartbeat(metrics, tasks_processed):
     """Envía un heartbeat periódico al módulo /monitoring."""
     data = {
         'worker_id': WORKER_ID,
-        'cpu_usage': cpu_usage,
-        'memory_usage': memory_usage,
+        'cpu_usage': metrics['cpu_usage'],
+        'memory_usage': metrics['memory_usage'],
+        'disk_usage': metrics['disk_usage'],
+        'network_usage': metrics['network_usage'],
         'tasks_processed': tasks_processed
     }
     try:
@@ -45,6 +48,24 @@ def process_task(task):
     print(f"Processing task: {task}")
     time.sleep(5)  # Simula el tiempo de procesamiento
     print(f"Task completed: {task}")
+
+def get_system_metrics():
+    """Obtiene las métricas del sistema en porcentajes."""
+    cpu_usage = psutil.cpu_percent(interval=1)  # Uso de CPU en %
+    memory_usage = psutil.virtual_memory().percent  # Uso de memoria en %
+    disk_usage = psutil.disk_usage('/').percent  # Uso de almacenamiento en %
+    
+    # Uso de red: calculamos el porcentaje de bytes enviados/recibidos en relación a un límite arbitrario
+    net_io = psutil.net_io_counters()
+    max_bandwidth = 1e9  # Ejemplo: 1 Gbps como capacidad máxima (ajustar según el sistema)
+    network_usage = ((net_io.bytes_sent + net_io.bytes_recv) * 8 / max_bandwidth) * 100  # En %
+
+    return {
+        "cpu_usage": cpu_usage,
+        "memory_usage": memory_usage,
+        "disk_usage": disk_usage,
+        "network_usage": min(network_usage, 100)  # Limitar al 100%
+    }
 
 def worker():
     """Bucle principal del worker."""
@@ -62,14 +83,9 @@ def worker():
                 tasks_processed += 1
             else:
                 print("No tasks in queue. Retrying...")
-
-            # Simula métricas de uso de CPU y memoria
-            cpu_usage = 30  # Valor simulado
-            memory_usage = 512  # Valor simulado (en MB)
-
-            # Envía un heartbeat después de cada iteración
-            send_heartbeat(cpu_usage, memory_usage, tasks_processed)
-
+            
+            metrics = get_system_metrics()
+            send_heartbeat(metrics, tasks_processed)
         except Exception as e:
             print(f"Error in worker: {e}")
 
