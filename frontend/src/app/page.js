@@ -4,10 +4,9 @@ import { useState } from "react";
 import styled from "styled-components";
 
 export default function Home() {
-  const [selectedFilter, setSelectedFilter] = useState("");
+  const [selectedFilters, setSelectedFilters] = useState([]);
   const [grayscaleValue, setGrayscaleValue] = useState(0.5);
   const [loading, setLoading] = useState(false);
-  const [processedImages, setProcessedImages] = useState([]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -15,19 +14,32 @@ export default function Home() {
 
     const formData = new FormData();
     formData.append("image", document.getElementById("image").files[0]);
-    formData.append("filters", JSON.stringify(selectedFilter ? [selectedFilter] : []));
-    if (selectedFilter === "grises") {
+    formData.append("filters", JSON.stringify(selectedFilters));
+    if (selectedFilters.includes("grises")) {
       formData.append("grayscaleIntensity", grayscaleValue);
     }
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/apply-filters`, {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/apply-filters`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
       if (response.ok) {
         const result = await response.json();
-        setProcessedImages(result.tasks.map((task) => task.output_path));
+        result.tasks.forEach((task) => {
+          const newTab = window.open(
+            `${process.env.NEXT_PUBLIC_API_URL}/${
+              task.output_path
+            }?t=${Date.now()}`,
+            "_blank"
+          );
+          if (newTab) {
+            newTab.focus();
+          }
+        });
       } else {
         console.error("Error al enviar las tareas:", response.statusText);
       }
@@ -36,6 +48,16 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFilterChange = (filter) => {
+    setSelectedFilters((prevFilters) => {
+      if (prevFilters.includes(filter)) {
+        return prevFilters.filter((f) => f !== filter);
+      } else {
+        return [...prevFilters, filter];
+      }
+    });
   };
 
   return (
@@ -59,37 +81,37 @@ export default function Home() {
           <Label>Filtros:</Label>
           <Radio>
             <input
-              type="radio"
+              type="checkbox"
               name="filters"
               value="bn"
               id="filter-bn"
-              checked={selectedFilter === "bn"}
-              onChange={() => setSelectedFilter("bn")}
+              checked={selectedFilters.includes("bn")}
+              onChange={() => handleFilterChange("bn")}
             />
             <label htmlFor="filter-bn">Blanco y Negro</label>
           </Radio>
           <Radio>
             <input
-              type="radio"
+              type="checkbox"
               name="filters"
               value="negativo"
               id="filter-negativo"
-              checked={selectedFilter === "negativo"}
-              onChange={() => setSelectedFilter("negativo")}
+              checked={selectedFilters.includes("negativo")}
+              onChange={() => handleFilterChange("negativo")}
             />
             <label htmlFor="filter-negativo">Negativo</label>
           </Radio>
           <Radio>
             <input
-              type="radio"
+              type="checkbox"
               name="filters"
               value="grises"
               id="filter-grises"
-              checked={selectedFilter === "grises"}
-              onChange={() => setSelectedFilter("grises")}
+              checked={selectedFilters.includes("grises")}
+              onChange={() => handleFilterChange("grises")}
             />
             <label htmlFor="filter-grises">Grises Ajustable</label>
-            {selectedFilter === "grises" && (
+            {selectedFilters.includes("grises") && (
               <SliderContainer>
                 <input
                   type="range"
@@ -113,27 +135,6 @@ export default function Home() {
 
       {/* Loader */}
       {loading && <Loader>Procesando...</Loader>}
-
-      {/* Modal de Imágenes Procesadas */}
-      {processedImages.length > 0 && (
-        <Modal>
-          <h2>Imágenes Procesadas</h2>
-          <ImageGrid>
-            {processedImages.map((image, index) => (
-              <div key={index}>
-                <img
-                  src={`${process.env.NEXT_PUBLIC_API_URL}/${image}?t=${Date.now()}`}
-                  alt={`Filtro ${index}`}
-                />
-                <a href={`${process.env.NEXT_PUBLIC_API_URL}/${image}`} download>
-                  Descargar
-                </a>
-              </div>
-            ))}
-          </ImageGrid>
-          <Button onClick={() => setProcessedImages([])}>Cerrar</Button>
-        </Modal>
-      )}
     </Container>
   );
 }
@@ -232,44 +233,4 @@ const Loader = styled.div`
   margin-top: 2rem;
   font-size: 1.5rem;
   color: #ffffff;
-`;
-
-const Modal = styled.div`
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: #2b2b2b;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  z-index: 1000;
-
-  h2 {
-    color: #cc7832;
-    margin-bottom: 1rem;
-  }
-`;
-
-const ImageGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
-
-  img {
-    width: 100%;
-    border-radius: 8px;
-  }
-
-  a {
-    display: block;
-    margin-top: 0.5rem;
-    text-align: center;
-    color: #4e94ce;
-    text-decoration: none;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
 `;
