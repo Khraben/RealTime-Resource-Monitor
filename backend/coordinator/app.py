@@ -8,17 +8,52 @@ app = Flask(__name__)
 redis_client = redis.Redis(host='redis', port=6379, decode_responses=True)
 
 MONITORING_URL = os.getenv('MONITORING_URL', 'http://monitoring:5001')
+WORKER_URL = os.getenv('WORKER_URL', 'http://worker:5001/process-task')
 
-@app.route('/task', methods=['POST'])
-def assign_task():
-    task = request.json
+@app.route('/apply-filters', methods=['POST'])
+def apply_filters():
+    if "image" not in request.files:
+        return jsonify({"error": "No image uploaded"}), 400
 
-    worker = get_least_loaded_worker()
-    if not worker:
-        return jsonify({"error": "No active workers available"}), 503
+    image = request.files["image"]
+    filters = request.form.get("filters")
+    grayscale_intensity = request.form.get("grayscaleIntensity")
+    pixel_size = request.form.get("pixelSize")
 
-    redis_client.rpush('task_queue', json.dumps(task))
-    return jsonify({"message": "Task added to queue", "task": task, "assigned_worker": worker}), 200
+    if not filters:
+        return jsonify({"error": "No filters selected"}), 400
+
+    filters = json.loads(filters)  # Convert string to list
+    image_id = str(os.urandom(16).hex())
+    image_path = f"/tmp/{image_id}.jpg"
+    image.save(image_path)
+
+    tasks = []
+    for filter_name in filters:
+        task = {
+            "filter": filter_name,
+            "image_path": image_path,
+            "output_path": f"/tmp/{image_id}_{filter_name}.jpg",
+        }
+        if filter_name == "grises":
+            task["intensity"] = float(grayscale_intensity)
+        elif filter_name == "pixelado":
+            task["pixel_size"] = int(pixel_size)
+        tasks.append(task)
+
+    for task in tasks:
+        worker = get_least_loaded_worker()
+        if not worker:
+            return jsonify({"error": "No active workers available"}), 503
+
+        try:
+            response = requests.post(WORKER_URL, json=task)
+            if response.status_code != 200:
+                return jsonify({"error": f"Failed to send task {task}"}), 500
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    return jsonify({"message": "Tasks created successfully", "tasks": tasks})
 
 @app.route('/status', methods=['GET'])
 def status():
