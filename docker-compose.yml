@@ -23,12 +23,12 @@ services:
     depends_on:
       - redis
 
-  worker-1:
+  pc-kevin-1:
     build:
       context: ./backend/worker
-    container_name: worker-1
+    container_name: pc-kevin-1
     environment:
-      - WORKER_ID=worker-1
+      - WORKER_ID=pc-kevin-1
       - WORKER_IP=127.0.0.1
       - WORKER_PORT=5002
       - MONITORING_URL=http://monitoring:5001
@@ -36,15 +36,24 @@ services:
       - redis
       - monitoring
 
-  worker-2:
+  pc-kevin-2:
     build:
       context: ./backend/worker
-    container_name: worker-2
+    container_name: pc-kevin-2
     environment:
-      - WORKER_ID=worker-2
+      - WORKER_ID=pc-kevin-2
       - WORKER_IP=127.0.0.1
       - WORKER_PORT=5003
       - MONITORING_URL=http://monitoring:5001
     depends_on:
       - redis
+      - monitoring
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: frontend
+    ports:
+      - "3000:3000"  
+    depends_on:
       - monitoring
