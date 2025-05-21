@@ -4,50 +4,37 @@ import { useState } from "react";
 import styled from "styled-components";
 
 export default function Home() {
-  const [showGrayscale, setShowGrayscale] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState("");
   const [grayscaleValue, setGrayscaleValue] = useState(0.5);
-
-  const [showPixelate, setShowPixelate] = useState(false);
-  const [pixelateValue, setPixelateValue] = useState(10);
-
   const [loading, setLoading] = useState(false);
   const [processedImages, setProcessedImages] = useState([]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true); // Mostrar loader
+    setLoading(true);
 
     const formData = new FormData();
-    const selectedFilters = Array.from(
-      document.querySelectorAll('input[name="filters"]:checked')
-    ).map((input) => input.value);
-
     formData.append("image", document.getElementById("image").files[0]);
-    formData.append("filters", JSON.stringify(selectedFilters));
-
-    if (showGrayscale) {
+    formData.append("filters", JSON.stringify(selectedFilter ? [selectedFilter] : []));
+    if (selectedFilter === "grises") {
       formData.append("grayscaleIntensity", grayscaleValue);
-    }
-    if (showPixelate) {
-      formData.append("pixelSize", pixelateValue);
     }
 
     try {
-      const response = await fetch("http://localhost:5000/apply-filters", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/apply-filters`, {
         method: "POST",
         body: formData,
       });
-
       if (response.ok) {
         const result = await response.json();
-        setProcessedImages(result.tasks.map((task) => task.output_path)); // Guardar rutas de imágenes procesadas
+        setProcessedImages(result.tasks.map((task) => task.output_path));
       } else {
         console.error("Error al enviar las tareas:", response.statusText);
       }
     } catch (error) {
       console.error("Error en la solicitud:", error);
     } finally {
-      setLoading(false); // Ocultar loader
+      setLoading(false);
     }
   };
 
@@ -70,56 +57,39 @@ export default function Home() {
         {/* Selección de Filtros */}
         <FormGroup>
           <Label>Filtros:</Label>
-          <Checkbox>
-            <input type="checkbox" name="filters" value="bn" id="filter-bn" />
-            <label htmlFor="filter-bn">Blanco y Negro</label>
-          </Checkbox>
-          <Checkbox>
+          <Radio>
             <input
-              type="checkbox"
+              type="radio"
               name="filters"
-              value="sepia"
-              id="filter-sepia"
+              value="bn"
+              id="filter-bn"
+              checked={selectedFilter === "bn"}
+              onChange={() => setSelectedFilter("bn")}
             />
-            <label htmlFor="filter-sepia">Sepia</label>
-          </Checkbox>
-          <Checkbox>
+            <label htmlFor="filter-bn">Blanco y Negro</label>
+          </Radio>
+          <Radio>
             <input
-              type="checkbox"
+              type="radio"
               name="filters"
               value="negativo"
               id="filter-negativo"
+              checked={selectedFilter === "negativo"}
+              onChange={() => setSelectedFilter("negativo")}
             />
             <label htmlFor="filter-negativo">Negativo</label>
-          </Checkbox>
-          <Checkbox>
+          </Radio>
+          <Radio>
             <input
-              type="checkbox"
-              name="filters"
-              value="desenfoque"
-              id="filter-desenfoque"
-            />
-            <label htmlFor="filter-desenfoque">Desenfoque</label>
-          </Checkbox>
-          <Checkbox>
-            <input
-              type="checkbox"
-              name="filters"
-              value="bordes"
-              id="filter-bordes"
-            />
-            <label htmlFor="filter-bordes">Bordes</label>
-          </Checkbox>
-          <Checkbox>
-            <input
-              type="checkbox"
+              type="radio"
               name="filters"
               value="grises"
               id="filter-grises"
-              onChange={(e) => setShowGrayscale(e.target.checked)}
+              checked={selectedFilter === "grises"}
+              onChange={() => setSelectedFilter("grises")}
             />
             <label htmlFor="filter-grises">Grises Ajustable</label>
-            {showGrayscale && (
+            {selectedFilter === "grises" && (
               <SliderContainer>
                 <input
                   type="range"
@@ -134,32 +104,7 @@ export default function Home() {
                 <span>{grayscaleValue}</span>
               </SliderContainer>
             )}
-          </Checkbox>
-          <Checkbox>
-            <input
-              type="checkbox"
-              name="filters"
-              value="pixelado"
-              id="filter-pixelado"
-              onChange={(e) => setShowPixelate(e.target.checked)}
-            />
-            <label htmlFor="filter-pixelado">Pixelado</label>
-            {showPixelate && (
-              <SliderContainer>
-                <input
-                  type="range"
-                  name="pixel_size"
-                  id="pixel_size"
-                  min="1"
-                  max="25"
-                  step="1"
-                  value={pixelateValue}
-                  onChange={(e) => setPixelateValue(e.target.value)}
-                />
-                <span>{pixelateValue}</span>
-              </SliderContainer>
-            )}
-          </Checkbox>
+          </Radio>
         </FormGroup>
 
         {/* Botón de Enviar */}
@@ -177,10 +122,10 @@ export default function Home() {
             {processedImages.map((image, index) => (
               <div key={index}>
                 <img
-                  src={`http://localhost:5000/${image}`}
+                  src={`${process.env.NEXT_PUBLIC_API_URL}/${image}?t=${Date.now()}`}
                   alt={`Filtro ${index}`}
                 />
-                <a href={`http://localhost:5000/${image}`} download>
+                <a href={`${process.env.NEXT_PUBLIC_API_URL}/${image}`} download>
                   Descargar
                 </a>
               </div>
@@ -233,14 +178,14 @@ const Label = styled.label`
   color: #ff5647;
 `;
 
-const Checkbox = styled.div`
+const Radio = styled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0;
   border-bottom: 1px solid #3c3f41;
 
-  input[type="checkbox"] {
+  input[type="radio"] {
     accent-color: #4e94ce;
   }
 

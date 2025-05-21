@@ -14,66 +14,29 @@ WORKER_IP = os.getenv('WORKER_IP', '127.0.0.1')
 WORKER_PORT = os.getenv('WORKER_PORT', '5002')
 
 def aplicar_filtro_bn(ruta_entrada, ruta_salida):
-    imagen = Image.open(ruta_entrada).convert("L") 
-    imagen.save(ruta_salida)
-    print(f"Imagen blanco y negro guardada en {ruta_salida}")
-
-def aplicar_filtro_sepia(ruta_entrada, ruta_salida):
     imagen = Image.open(ruta_entrada)
-    pixeles = imagen.load()
-
-    for y in range(imagen.height):
-        for x in range(imagen.width):
-            r, g, b = imagen.getpixel((x, y))
-
-            tr = int(0.393 * r + 0.769 * g + 0.189 * b)
-            tg = int(0.349 * r + 0.686 * g + 0.168 * b)
-            tb = int(0.272 * r + 0.534 * g + 0.131 * b)
-
-            sepia = (
-                min(255, tr),
-                min(255, tg),
-                min(255, tb)
-            )
-
-            pixeles[x, y] = sepia
-
-    imagen.save(ruta_salida)
-    print(f"Imagen sepia guardada en {ruta_salida}")
+    if imagen.mode != "RGB":
+        imagen = imagen.convert("RGB")
+    imagen_bn = imagen.convert("L").convert("RGB")
+    imagen_bn.save(ruta_salida, format='JPEG')
+    print(f"Imagen blanco y negro guardada en {ruta_salida}")
 
 def aplicar_filtro_negativo(ruta_entrada, ruta_salida):
     imagen = Image.open(ruta_entrada)
-    imagen_negativa = ImageOps.invert(imagen.convert("RGB"))
-    imagen_negativa.save(ruta_salida)
+    if imagen.mode != "RGB":
+        imagen = imagen.convert("RGB")
+    imagen_negativa = ImageOps.invert(imagen)
+    imagen_negativa.save(ruta_salida, format='JPEG')
     print(f"Imagen negativa guardada en {ruta_salida}")
-    
-def aplicar_filtro_desenfoque(ruta_entrada, ruta_salida):
-    imagen = Image.open(ruta_entrada)
-    imagen_desenfocada = imagen.filter(ImageFilter.BLUR)
-    imagen_desenfocada.save(ruta_salida)
-    print(f"Imagen desenfocada guardada en {ruta_salida}")
-      
-def aplicar_filtro_bordes(ruta_entrada, ruta_salida):
-    imagen = Image.open(ruta_entrada)
-    imagen_bordes = imagen.filter(ImageFilter.FIND_EDGES)
-    imagen_bordes.save(ruta_salida)
-    print(f"Imagen con bordes guardada en {ruta_salida}")
 
 def aplicar_filtro_grises_ajustable(ruta_entrada, ruta_salida, intensidad):
     imagen = Image.open(ruta_entrada)
-    imagen_gris = imagen.convert("L")
-    imagen_final = Image.blend(imagen.convert("RGB"), imagen_gris.convert("RGB"), intensidad)
-    imagen_final.save(ruta_salida)
+    if imagen.mode != "RGB":
+        imagen = imagen.convert("RGB")
+    imagen_gris = imagen.convert("L").convert("RGB")
+    imagen_final = Image.blend(imagen, imagen_gris, intensidad)
+    imagen_final.save(ruta_salida, format='JPEG')
     print(f"Imagen en escala de grises ajustada guardada en {ruta_salida}")
-
-def aplicar_filtro_pixelado(ruta_entrada, ruta_salida, pixel_size):
-    imagen = Image.open(ruta_entrada)
-    imagen_pequeña = imagen.resize(
-        (imagen.width // pixel_size, imagen.height // pixel_size), Image.NEAREST
-    )
-    imagen_pixelada = imagen_pequeña.resize(imagen.size, Image.NEAREST)
-    imagen_pixelada.save(ruta_salida)
-    print(f"Imagen pixelada guardada en {ruta_salida}")
 
 
 def register_worker():
@@ -110,25 +73,19 @@ def process_task(task):
         input_path = task.get("image_path")
         output_path = task.get("output_path")
 
+        # Solo permitir un filtro a la vez
+        filtros_validos = ["bn", "negativo", "grises"]
+        if filter_name not in filtros_validos:
+            print(f"Unknown or multiple filters: {filter_name}")
+            return
+
         if filter_name == "bn":
             aplicar_filtro_bn(input_path, output_path)
-        elif filter_name == "sepia":
-            aplicar_filtro_sepia(input_path, output_path)
         elif filter_name == "negativo":
             aplicar_filtro_negativo(input_path, output_path)
-        elif filter_name == "desenfoque":
-            aplicar_filtro_desenfoque(input_path, output_path)
-        elif filter_name == "bordes":
-            aplicar_filtro_bordes(input_path, output_path)
         elif filter_name == "grises":
             intensidad = task.get("intensity", 0.5)
             aplicar_filtro_grises_ajustable(input_path, output_path, intensidad)
-        elif filter_name == "pixelado":
-            pixel_size = task.get("pixel_size", 10)
-            aplicar_filtro_pixelado(input_path, output_path, pixel_size)
-        else:
-            print(f"Unknown filter: {filter_name}")
-            return
 
         print(f"Task completed: {task}")
     except Exception as e:
@@ -158,14 +115,18 @@ def worker():
             print("Waiting for tasks...")
             task = redis_client.blpop('task_queue', timeout=10)
             if task:
+                # task is a tuple (queue_name, task_data)
                 _, task_data = task
                 print(f"Task received: {task_data}")
-                task_json = json.loads(task_data)
+                try:
+                    task_json = json.loads(task_data)
+                except Exception as e:
+                    print(f"Error decoding task JSON: {e}")
+                    continue
                 process_task(task_json)
                 tasks_processed += 1
             else:
                 print("No tasks in queue. Retrying...")
-            
             metrics = get_system_metrics()
             send_heartbeat(metrics, tasks_processed)
         except Exception as e:

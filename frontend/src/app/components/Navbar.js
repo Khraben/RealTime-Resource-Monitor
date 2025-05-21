@@ -9,11 +9,11 @@ export default function Navbar() {
 
   return (
     <Nav>
-      <NavItem isActive={pathname === "/"}>
+      <NavItem $isActive={pathname === "/"}>
         <Link href="/">Inicio</Link>
       </NavItem>
       <Separator>|</Separator>
-      <NavItem isActive={pathname === "/dashboard"}>
+      <NavItem $isActive={pathname === "/dashboard"}>
         <Link href="/dashboard">Dashboard</Link>
       </NavItem>
     </Nav>
@@ -29,9 +29,9 @@ const Nav = styled.nav`
   margin-top: 1rem;
 `;
 
-const NavItem = styled.div.attrs(({ isActive }) => ({}))`
+const NavItem = styled.div`
   a {
-    color: ${({ isActive }) => (isActive ? "#ffc66d" : "#a9b7c6")};
+    color: ${({ $isActive }) => ($isActive ? "#ffc66d" : "#a9b7c6")};
     text-decoration: none;
     font-size: 1.2rem;
     font-weight: bold;
@@ -41,8 +41,8 @@ const NavItem = styled.div.attrs(({ isActive }) => ({}))`
       color: #cc7832;
     }
 
-    border-bottom: ${({ isActive }) =>
-      isActive ? "2px solid #ffc66d" : "none"};
+    border-bottom: ${({ $isActive }) =>
+      $isActive ? "2px solid #ffc66d" : "none"};
     padding-bottom: 0.2rem;
   }
 `;

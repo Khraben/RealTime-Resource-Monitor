@@ -16,6 +16,8 @@ services:
       - "5000:5000"
     depends_on:
       - redis
+    volumes:
+      - shared-tmp:/tmp
 
   monitoring:
     build:
@@ -32,12 +34,14 @@ services:
     container_name: pc-kevin
     environment:
       - WORKER_ID=pc-kevin
-      - WORKER_IP=172.24.92.26 
+      - WORKER_IP=pc-kevin
       - WORKER_PORT=5002
-      - MONITORING_URL=http://172.24.92.26:5001
+      - MONITORING_URL=http://monitoring:5001
     depends_on:
       - redis
       - monitoring
+    volumes:
+      - shared-tmp:/tmp
 
   frontend:
     build:
@@ -47,3 +51,6 @@ services:
       - "3000:3000"  
     depends_on:
       - monitoring
+
+volumes:
+  shared-tmp:
