@@ -17,7 +17,11 @@ export default function Dashboard() {
       }
     }
 
-    fetchWorkers();
+    const interval = setInterval(() => {
+      fetchWorkers();
+    }, 500);
+
+    return () => clearInterval(interval);
   }, []);
 
   return (

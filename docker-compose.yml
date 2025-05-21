@@ -4,6 +4,9 @@ services:
     container_name: redis
     ports:
       - "6379:6379"
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf 
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"] 
 
   coordinator:
     build:
@@ -23,28 +26,15 @@ services:
     depends_on:
       - redis
 
-  pc-kevin-1:
+  pc-kevin:
     build:
       context: ./backend/worker
-    container_name: pc-kevin-1
+    container_name: pc-kevin
     environment:
-      - WORKER_ID=pc-kevin-1
-      - WORKER_IP=127.0.0.1
+      - WORKER_ID=pc-kevin
+      - WORKER_IP=172.24.92.26 
       - WORKER_PORT=5002
-      - MONITORING_URL=http://monitoring:5001
-    depends_on:
-      - redis
-      - monitoring
-
-  pc-kevin-2:
-    build:
-      context: ./backend/worker
-    container_name: pc-kevin-2
-    environment:
-      - WORKER_ID=pc-kevin-2
-      - WORKER_IP=127.0.0.1
-      - WORKER_PORT=5003
-      - MONITORING_URL=http://monitoring:5001
+      - MONITORING_URL=http://172.24.92.26:5001
     depends_on:
       - redis
       - monitoring
