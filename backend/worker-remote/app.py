@@ -6,10 +6,8 @@ import os
 import psutil
 from PIL import Image, ImageOps, ImageFilter
 
-redis_host = os.getenv("REDIS_HOST", "localhost")
-redis_port = int(os.getenv("REDIS_PORT", 6379))
-monitoring_url = os.getenv('MONITORING_URL', 'http://localhost:5001')
-
+redis_client = redis.Redis(host='172.24.92.26', port=6379, decode_responses=True)
+MONITORING_URL = os.getenv('MONITORING_URL', 'http://monitoring:5001')
 
 WORKER_ID = os.getenv('WORKER_ID', 'worker-1')
 WORKER_IP = os.getenv('WORKER_IP', '127.0.0.1')
@@ -84,11 +82,14 @@ def register_worker():
         'ip': WORKER_IP,
         'port': WORKER_PORT
     }
+    print(f"[REGISTRO] Intentando registrar: {data}")
     try:
         response = requests.post(f'{MONITORING_URL}/register', json=data)
-        print(response.json())
+        print(f"[RESPUESTA] {response.status_code}: {response.text}")
     except Exception as e:
-        print(f"Error registering worker: {e}")
+        print(f"[ERROR] No se pudo registrar el worker: {e}")
+
+
 
 def send_heartbeat(metrics, tasks_processed):
     data = {
@@ -175,12 +176,12 @@ def worker():
 
 if __name__ == '__main__':
     try:
-        print("Connecting to Redis...")
+        print("[INICIO] Verificando conexión con Redis...")
         redis_client.ping()
-        print("Connected to Redis successfully.")
+        print("[ÉXITO] Redis está conectado.")
 
-        register_worker()
+        register_worker()  # 👈 esto es clave
 
         worker()
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        print(f"[ERROR FATAL] {e}")
