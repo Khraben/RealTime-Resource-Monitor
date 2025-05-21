@@ -1,8 +1,11 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS 
 import redis
 import time
 
 app = Flask(__name__)
+CORS(app) 
+
 redis_client = redis.StrictRedis(host='redis', port=6379, decode_responses=True)
 
 @app.route('/register', methods=['POST'])
@@ -14,6 +17,8 @@ def register_worker():
         'port': data['port'],
         'cpu_usage': 0,
         'memory_usage': 0,
+        'disk_usage': 0,
+        'network_usage': 0,
         'tasks_processed': 0,
         'last_heartbeat': time.time()
     }
@@ -28,8 +33,8 @@ def worker_heartbeat():
     if redis_client.sismember('workers:active', worker_id):
         redis_client.hset(f'worker:{worker_id}', 'cpu_usage', data['cpu_usage'])
         redis_client.hset(f'worker:{worker_id}', 'memory_usage', data['memory_usage'])
-        redis_client.hset(f'worker:{worker_id}', 'disk_usage', data['disk_usage'])  # Agregar almacenamiento
-        redis_client.hset(f'worker:{worker_id}', 'network_usage', data['network_usage'])  # Agregar red
+        redis_client.hset(f'worker:{worker_id}', 'disk_usage', data['disk_usage'])  
+        redis_client.hset(f'worker:{worker_id}', 'network_usage', data['network_usage'])  
         redis_client.hset(f'worker:{worker_id}', 'tasks_processed', data['tasks_processed'])
         redis_client.hset(f'worker:{worker_id}', 'last_heartbeat', time.time())
         return jsonify({'message': f'Heartbeat received for worker {worker_id}'}), 200
@@ -42,6 +47,7 @@ def get_workers():
     worker_data = []
     for worker_id in workers:
         data = redis_client.hgetall(f'worker:{worker_id}')
+        data['worker_id'] = worker_id 
         worker_data.append(data)
     return jsonify(worker_data), 200
 

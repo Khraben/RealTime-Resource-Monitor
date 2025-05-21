@@ -5,17 +5,14 @@ import requests
 import os
 import psutil
 
-# Configuración de Redis y Monitoring
 redis_client = redis.Redis(host='redis', port=6379, decode_responses=True)
 MONITORING_URL = os.getenv('MONITORING_URL', 'http://monitoring:5001')
 
-# Información del Worker
 WORKER_ID = os.getenv('WORKER_ID', 'worker-1')
 WORKER_IP = os.getenv('WORKER_IP', '127.0.0.1')
 WORKER_PORT = os.getenv('WORKER_PORT', '5002')
 
 def register_worker():
-    """Registra el worker en el módulo /monitoring."""
     data = {
         'worker_id': WORKER_ID,
         'ip': WORKER_IP,
@@ -28,7 +25,6 @@ def register_worker():
         print(f"Error registering worker: {e}")
 
 def send_heartbeat(metrics, tasks_processed):
-    """Envía un heartbeat periódico al módulo /monitoring."""
     data = {
         'worker_id': WORKER_ID,
         'cpu_usage': metrics['cpu_usage'],
@@ -44,31 +40,27 @@ def send_heartbeat(metrics, tasks_processed):
         print(f"Error sending heartbeat: {e}")
 
 def process_task(task):
-    """Procesa una tarea simulada."""
     print(f"Processing task: {task}")
-    time.sleep(5)  # Simula el tiempo de procesamiento
+    time.sleep(5)  
     print(f"Task completed: {task}")
 
 def get_system_metrics():
-    """Obtiene las métricas del sistema en porcentajes."""
-    cpu_usage = psutil.cpu_percent(interval=1)  # Uso de CPU en %
-    memory_usage = psutil.virtual_memory().percent  # Uso de memoria en %
-    disk_usage = psutil.disk_usage('/').percent  # Uso de almacenamiento en %
-    
-    # Uso de red: calculamos el porcentaje de bytes enviados/recibidos en relación a un límite arbitrario
+    cpu_usage = psutil.cpu_percent(interval=1) 
+    memory_usage = psutil.virtual_memory().percent 
+    disk_usage = psutil.disk_usage('/').percent
     net_io = psutil.net_io_counters()
-    max_bandwidth = 1e9  # Ejemplo: 1 Gbps como capacidad máxima (ajustar según el sistema)
-    network_usage = ((net_io.bytes_sent + net_io.bytes_recv) * 8 / max_bandwidth) * 100  # En %
+    max_bandwidth = 1e8  # 1e9 = 1 Gbps, 1e8 = 100 Mbps, 5e8 = 500 Mbps...
+    network_usage = ((net_io.bytes_sent + net_io.bytes_recv) * 8 / max_bandwidth) * 100 
+    network_usage = round(network_usage, 10)
 
     return {
         "cpu_usage": cpu_usage,
         "memory_usage": memory_usage,
         "disk_usage": disk_usage,
-        "network_usage": min(network_usage, 100)  # Limitar al 100%
+        "network_usage": min(network_usage, 100) 
     }
 
 def worker():
-    """Bucle principal del worker."""
     print("Worker is starting...")
     tasks_processed = 0
     while True:
@@ -95,10 +87,8 @@ if __name__ == '__main__':
         redis_client.ping()
         print("Connected to Redis successfully.")
 
-        # Registra el worker en el módulo /monitoring
         register_worker()
 
-        # Inicia el bucle principal del worker
         worker()
     except Exception as e:
         print(f"Unexpected error: {e}")
