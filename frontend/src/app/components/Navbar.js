@@ -29,9 +29,7 @@ const Nav = styled.nav`
   margin-top: 1rem;
 `;
 
-const NavItem = styled.div.attrs((props) => ({
-  isActive: undefined,
-}))`
+const NavItem = styled.div.attrs(({ isActive }) => ({}))`
   a {
     color: ${({ isActive }) => (isActive ? "#ffc66d" : "#a9b7c6")};
     text-decoration: none;
